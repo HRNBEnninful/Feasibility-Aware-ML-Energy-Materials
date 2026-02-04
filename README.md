@@ -2,9 +2,11 @@
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)  
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-red.svg)](https://pytorch.org/)  
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5.2-yellow.svg)](https://scikit-learn.org/stable/)  
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5.2-yellow.svg)](https://scikit-learn.org/stable/)
+[![Plotly & Dash](https://img.shields.io/badge/Plotly-Dash-orange.svg)](https://plotly.com/dash/)  
 [![UMAP](https://img.shields.io/badge/UMAP-learn-orange.svg)](https://umap-learn.readthedocs.io/)  
 [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC%20BY--SA%204.0-green.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/18486311.svg)](https://doi.org/10.5281/zenodo.18486311)
 
 ---
 
@@ -181,4 +183,3 @@ Henry Reynolds Nana Benyin Enninful
 Email: hrnbenninful@gmail.com  
 GitHub: https://github.com/HRNBEnninful  
 LinkedIn: https://www.linkedin.com/in/henryrnbenninful/
-
