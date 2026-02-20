@@ -9,13 +9,12 @@
 [![DOI](https://zenodo.org/badge/18486311.svg)](https://doi.org/10.5281/zenodo.18486311)
 
 ---
-
 This repository accompanies the manuscript:
 
-**“Feasibility Mapping of Latent Representations Reveals Transferability Limits in Machine-Learning Models for Electrochemical Energy Materials”**  
-(submitted to *ACS Energy Letters*)
+**“Feasibility Mapping in Latent Space Reveals Transferability Limits in Cross-Domain Machine Learning for Electrochemical Materials”**
+(submitted to *ACS Applied Energy Materials*)
 
-It provides a fully reproducible pipeline for training multitask machine-learning models on heterogeneous electrochemical materials datasets and for interpreting the learned latent representations as maps of **data-supported feasibility**, rather than purely predictive intermediates.
+It provides a fully reproducible, three-stage deterministic pipeline for training multitask neural encoders on heterogeneous electrochemical materials datasets and interpreting the learned latent space as a geometry-defined feasibility manifold governing cross-domain transfer.
 
 ---
 
@@ -24,13 +23,14 @@ It provides a fully reproducible pipeline for training multitask machine-learnin
 This project is built around the following principles:
 
 - No new machine-learning architecture is proposed
-- No domain labels are used during model training
-- Model evaluation extends beyond accuracy to assess feasibility, extrapolation risk, and transferability
-- Latent representations are treated as objects of scientific interpretation, not black boxes
+- Domain labels are never used as model inputs
+- All preprocessing is train-only to prevent leakage
+- Model evaluation extends beyond predictive accuracy to assess feasibility, extrapolation exposure, and transferability limits
+- Latent representations are treated as objects of scientific interpretation, not black-box intermediates
 
 The framework addresses the question:
 
-> Which regions of predicted electrochemical performance are genuinely supported by data, and which arise from extrapolation across heterogeneous material domains?
+> Which regions of predicted electrochemical performance are structurally supported by training data, and which correspond to geometric extrapolation across heterogeneous domains?
 
 ---
 
@@ -42,53 +42,60 @@ A multitask artificial neural network (ANN) is trained jointly on multiple elect
 - Experimentally measured metal–organic frameworks (MOFs)
 - Simulated MOFs
 
-The shared latent representation learned by the encoder is subsequently analyzed post hoc to:
+The shared encoder produces a frozen latent representation, which is subsequently analyzed to:
 
 - Map smooth, data-supported electrochemical property manifolds
-- Quantify domain divergence and overlap
-- Identify sparsely supported regions associated with elevated screening risk
-- Diagnose transferability limits across material classes
+- Quantify domain divergence (centroid distance, MMD²)
+- Identify sparse support regions (distance-to-support metrics)
+- Define geometry-based feasibility frontiers (r*)
+- Detect negative transfer zones inside nominal support
 
 ---
 
 ## 📁 Repository Structure
 
-```
-├── Feature contract & preprocessing
-│   ├── feature selection and leakage control
-│   ├── global scaling and missingness masking
-│   └── preprocessing artifacts (saved)
+├── Stage 0 — Feature/Target Contract
+│   ├── builds frozen feature list (feature_cols.pkl)
+│   ├── defines canonical target names (target_cols.pkl)
+│   └── generates domain label coverage summary
 │
-├── Multitask ANN training
-│   ├── shared encoder with deterministic latent space
-│   ├── multiple supervised electrochemical heads
-│   └── trained model checkpoint
+├── Stage 1 — Multitask ANN Training
+│   ├── domain-stratified train/validation split
+│   ├── train-only imputer and scaler persistence
+│   ├── optional missingness mask concatenation
+│   ├── masked multitask loss (sparse supervision)
+│   ├── predictive validation metrics (RMSE, MAE, R²)
+│   └── frozen checkpoint (encoder + heads)
 │
-├── Latent feasibility analysis
-│   ├── latent extraction (encoder only)
-│   ├── PCA and UMAP geometry
-│   ├── property-colored embeddings
-│   ├── domain divergence (centroid distance, MMD²)
-│   ├── latent–target coupling analysis
+├── Stage 2 — PAPER_MASTER_PIPELINE_v2.py
+│   ├── loads frozen encoder
+│   ├── extracts latent space (Z)
+│   ├── PCA / UMAP visualization
+│   ├── domain divergence (centroid, MMD²)
+│   ├── support imbalance diagnostics (kNN distance)
+│   ├── feasibility frontier (r*) computation
+│   ├── coverage ratio analysis
+│   ├── negative transfer zone detection
+│   ├── latent–target coupling heatmaps
 │   └── property-sorted latent trajectories
-│
-├── Domain separability diagnostics
-│   ├── linear probe with stratified cross-validation
-│   ├── random-guess baseline comparison
-│   └── latent dimension importance ranking
 │
 ├── models_disentangled/
 │   ├── feature_cols.pkl
-│   ├── feature_scaler.pkl
 │   ├── target_cols.pkl
+│   ├── feature_imputer_train_only.pkl
+│   ├── feature_scaler_train_only.pkl
+│   ├── target_scaler_train_only.pkl
 │   ├── models/
-│   │   └── multitask_ann_PAPER_A.pt
-│   └── diagnostics/
-│       └── paperA_latent_transfer/
+│   │   └── multitask_ann_PAPER_A_MASTER.pt
+│   ├── final_figures/
+│   └── final_tables/
 │
-├── README.md
-└── LICENSE
-```
+├── carbon_dataset_experimental.xlsx
+├── mof_dataset_experimental.xlsx
+├── mof_dataset_simulation.xlsx
+├── PAPER_MASTER_PIPELINE_v2.py
+├── STAGE_1_TRAIN_MULTITASK.py
+└── README.md
 
 ---
 
@@ -102,7 +109,7 @@ The pipeline expects the following Excel files in the project root:
 
 These correspond to experimentally measured porous carbon electrodes, experimentally measured MOF electrodes, and simulated MOF electrodes (ionic liquid EMIMBF₄), respectively.
 
-Datasets are concatenated internally with a `domain` label used **only for analysis and visualization**, never during model training.
+Datasets are concatenated internally with a domain label used **only for analysis, visualization, and diagnostic evaluation — never for training**.
 
 ---
 
@@ -136,35 +143,48 @@ pip install -r requirements.txt
 
 ## 🚀 Usage Workflow
 
-1. **Feature contract and scaling**  
-   Defines the allowed input space, excludes targets and domain labels, fits a global scaler, and saves preprocessing artifacts.
+**Stage 0 — Build Feature & Target Contract**
 
-2. **Multitask ANN training**  
-   Trains a shared encoder with multiple electrochemical targets using masked losses. The trained model is saved and remains fixed for all subsequent analyses.
+- Defines canonical feature columns
+- Harmonizes target aliases
+- Saves frozen feature and target artifacts
 
-3. **Latent feasibility analysis**  
-   Extracts frozen latent representations and performs geometric, statistical, and property-coupling analyses to identify feasible and extrapolative regimes.
+**Stage 1 — Train Multitask Encoder**
 
-4. **Domain separability diagnostics**  
-   Uses a post hoc linear probe to quantify emergent domain encoding, compare against a random-guess baseline, and identify domain-informative latent dimensions.
+- Domain-stratified split
+- Train-only imputation and scaling
+- Masked multitask regression
+- Saves deterministic checkpoint
+- Outputs validation RMSE, MAE, and R²
+
+**Stage 2 — Latent Feasibility Mapping**
+
+- Loads frozen encoder
+- Extracts latent space once (no retraining)
+- Computes geometry-based diagnostics
+- Generates all manuscript figures
+- Exports publication-ready PNG + HTML
 
 ---
 
 ## 📊 Interpretation Guide
 
-- Smooth latent gradients indicate data-supported feasibility regimes
-- Sparse or isolated latent regions indicate elevated extrapolation risk
-- Strong domain divergence signals limited cross-domain transferability
-- Concentrated domain importance across latent dimensions indicates partial disentanglement rather than representational collapse
+- Smooth latent gradients indicate structured electrochemical response regimes
+- Large kNN distance-to-support indicates geometric extrapolation exposure
+- Feasibility frontier (r*) defines intrinsic training-supported boundary
+- 100% coverage does not imply chemical equivalence or guaranteed transfer accuracy
+- Negative transfer zones identify boundary-fragile regions within nominal support
 
 ---
 
 ## 🔁 Reproducibility
 
-- Global random seeds fixed (NumPy, PyTorch)
-- Preprocessing artifacts persisted and reused
-- No retraining during analysis stages
-- All figures exported as publication-quality PNGs and interactive HTML
+- Global random seeds fixed (NumPy, PyTorch, CUDA)
+- Deterministic minibatch ordering
+- Train-only preprocessing artifacts persisted
+- Encoder frozen before all geometry analyses
+- No retraining during Stage 2
+- All figures reproducibly generated from frozen checkpoint
 
 ---
 
