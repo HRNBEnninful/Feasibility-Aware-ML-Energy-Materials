@@ -12,7 +12,7 @@
 This repository accompanies the manuscript:
 
 **“Feasibility Mapping in Latent Space Reveals Transferability Limits in Cross-Domain Machine Learning for Electrochemical Materials”**
-(submitted to *ACS Applied Energy Materials*)
+(submitted to *Energy and AI*)
 
 It provides a fully reproducible, three-stage deterministic pipeline for training multitask neural encoders on heterogeneous electrochemical materials datasets and interpreting the learned latent space as a geometry-defined feasibility manifold governing cross-domain transfer.
 
